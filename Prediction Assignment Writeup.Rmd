@@ -1,0 +1,150 @@
+---
+title: "Prediction Assignment Writeup"
+author: "Ainslee Hampel"
+date: "11/23/2019"
+output:
+  word_document: default
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+# install.packages("knitr")
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Background
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+## Data
+
+The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment. 
+
+## What to submit
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+Peer Review Portion
+
+Your submission for the Peer Review portion should consist of a link to a Github repo with your R markdown and compiled HTML file describing your analysis. Please constrain the text of the writeup to < 2000 words and the number of figures to be less than 5. It will make it easier for the graders if you submit a repo with a gh-pages branch so the HTML page can be viewed online (and you always want to make it easy on graders :-).
+Course Project Prediction Quiz Portion
+
+Apply your machine learning algorithm to the 20 test cases available in the test data above and submit your predictions in appropriate format to the Course Project Prediction Quiz for automated grading. 
+
+## Approach
+
+Our outcome varianle is classe, a factor variable with 5 levels. This is 10 repetitions of the Unilateral Dumbbell biceps curl in 5 different ways:
+
+1) Exactly according to the specification (Class A)
+
+2) Throwing the elbows to the front (Class B)
+
+3) Lifting dumbbell only halfway (Class C)
+
+4) Lowering the dumbbell only halfway (Class D)
+
+5) Throwing the hips to the front (Class E)
+
+Class A is the correct way to do the dumbbell biceos curls, while the other 4 classes are examples of common mistakes. The prediction evaluations will be based on maximizing the accuracy and minimizing the out-of-sample error. All other available var after cleaning will be used for the prediction
+I will be using 2 models will be tested using decision tree and random forest algorithms. The model with the highest accuracy be chosen as our final model.
+
+# Cross Validation
+The cross validation will be used by the subsampling of our training data. I will be doing it randomly without replacement into 2 subsamples: 75% of the training set and another 25% of the testing set. Once the most accurate model is decided, I will test the model on the orginal testing data.
+
+# Expected out of sample error
+
+The expected out of sample error will match to the quantity. Accuracy is measured by correctly classifying the observation of the samples. I will be using the subsamples to help train the model.  
+
+
+
+
+```{r require(knitr)}
+ require(knitr)
+```
+
+# Install the libraries and select a Seed
+
+```{r library}
+library(caret)
+library(randomForest)
+library(rpart)
+library(rpart.plot)
+library(RColorBrewer)
+library(rattle)
+library(ggplot2)
+set.seed(1234)
+```
+# Preprocessing
+
+Pull data from the URL and cleaning up the data. I will be removing values and variables.
+```{r dataset}
+trainingDataSet <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", na.strings=c("", " ","NA"))
+testingDataSet <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", na.strings=c("", " ","NA"))
+## Removing empty/missing values
+trainingDataSet<-trainingDataSet[,colSums(is.na(trainingDataSet)) == 0]
+testingDataSet <-testingDataSet[,colSums(is.na(testingDataSet)) == 0]
+## Removing some of the variables that we don't need for this study
+trainingDataSet   <-trainingDataSet[,-c(1:7)]
+testingDataSet <-testingDataSet[,-c(1:7)]
+subData <- createDataPartition(y=trainingDataSet$classe, p=0.7, list=FALSE)
+subTrainingData <- trainingDataSet[subData, ]
+subTestingData <- trainingDataSet[-subData, ]
+```
+
+Looking at the training data
+```{r view}
+summary(subTrainingData)
+```
+
+Looking at the training data
+```{r view1}
+summary(subTestingData)
+```
+
+## Making the model
+I will be using the decision tree model (DTM) for the first model
+
+```{r model1}
+DTM <- rpart(classe ~ ., data=subTrainingData, method="class")
+predictionDTM <- predict(DTM, subTrainingData, type = "class")
+confusionMatrix(predictionDTM, subTrainingData$classe)
+```
+
+
+The second model using the random forest, RF.
+
+```{r model2}
+RF <- randomForest(classe ~. , data=subTrainingData, method="class")
+predictionRF <- predict(RF, subTrainingData, type = "class")
+confusionMatrix(predictionRF, subTrainingData$classe)
+```
+
+
+
+## Conclusion
+The second model, random forest model, preformed better than the decision tree model. The random forest model has an accuracy of 100% and the decision tree model has an accuracy of 74%. With the random forest, I should expect little to no misclassifications.
+
+
+## Run the model with the test data set
+
+```{r predict1}
+predictDTM <- predict(DTM, testingDataSet, type="class")
+predictDTM
+```
+
+```{r predict2}
+predictRF <- predict(RF, testingDataSet, type="class")
+predictRF
+```
+
+I would go with the Random forest model because the accuracy is higher than the other model.
+
+
+
+
